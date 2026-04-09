@@ -293,6 +293,8 @@ function HTimeline({ events, colors, minYear, maxYear, height, label }) {
 // ====== EVOLUTION ======
 function Evolution() {
   const [ref, vis] = useInView();
+  const [expanded, setExpanded] = useState({});
+  const toggle = (i) => setExpanded((prev) => ({ ...prev, [i]: !prev[i] }));
   const steps = [
     { color: "#00e5a0", num: "01", title: "USB > Red Air-Gapped", sub: "Stuxnet (2010)", 
       desc: "Infiltracion fisica + propagacion limitada. Anios de desarrollo. Primer cruce digital-fisico.",
@@ -310,24 +312,24 @@ function Evolution() {
       <p style={{ textAlign: "center", fontSize: "0.72rem", color: "var(--dim)", marginBottom: "1rem", maxWidth: 500, marginLeft: "auto", marginRight: "auto" }}>Cada ataque escalo en sofisticacion, alcance y dificultad de deteccion. Click en cada tarjeta para mas contexto.</p>
       <div style={{ display: "flex", gap: 0, alignItems: "flex-start", flexWrap: "wrap", justifyContent: "center" }}>
         {steps.map((s, i) => {
-          const [expanded, setExpanded] = useState(false);
+          const isExp = expanded[i] || false;
           return (
             <div key={i} style={{ display: "flex", alignItems: "flex-start" }}>
-              <div onClick={() => setExpanded(!expanded)}
+              <div onClick={() => toggle(i)}
                 style={{ flex: "1 1 220px", maxWidth: 260, padding: "1rem", background: "var(--card)", border: "1px solid var(--bdr)", borderRadius: 12, transition: "all 0.3s", opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(20px)", transitionDelay: i * 0.2 + "s", cursor: "pointer" }}
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = s.color + "60"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = expanded ? s.color + "40" : "var(--bdr)"; }}>
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = isExp ? s.color + "40" : "var(--bdr)"; }}>
                 <div style={{ fontFamily: "monospace", fontSize: "1.3rem", fontWeight: 700, color: s.color, opacity: 0.5, marginBottom: "0.3rem" }}>{s.num}</div>
                 <div style={{ fontFamily: "monospace", fontSize: "0.48rem", color: s.color, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 2 }}>{s.sub}</div>
                 <div style={{ fontWeight: 600, fontSize: "0.85rem", marginBottom: 3, color: "var(--text)" }}>{s.title}</div>
                 <div style={{ fontSize: "0.7rem", color: "var(--dim)", lineHeight: 1.6 }}>{s.desc}</div>
-                {expanded && (
+                {isExp && (
                   <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid " + s.color + "20", fontSize: "0.68rem", color: "var(--dim)", lineHeight: 1.7 }}>
                     {s.detail}
                   </div>
                 )}
                 <div style={{ fontFamily: "monospace", fontSize: "0.45rem", color: s.color, marginTop: 6, opacity: 0.6, textAlign: "center" }}>
-                  {expanded ? "[-] MENOS" : "[+] MAS CONTEXTO"}
+                  {isExp ? "[-] MENOS" : "[+] MAS CONTEXTO"}
                 </div>
               </div>
               {i < 2 && <div style={{ padding: "0 0.35rem", fontSize: "1rem", color: "var(--dim)", marginTop: "3rem" }}>{">"}</div>}
@@ -437,12 +439,23 @@ function OverviewPage() {
   const allColors = { stuxnet: "#00e5a0", wannacry: "#ff3366", solarwinds: "#ffaa00" };
   return (
     <div>
+      {/* Title */}
+      <div style={{ textAlign: "center", marginBottom: "2rem", paddingTop: "0.5rem" }}>
+        <div style={{ fontFamily: "monospace", fontSize: "0.55rem", letterSpacing: "0.25em", color: "var(--dim)", textTransform: "uppercase", marginBottom: "0.5rem" }}>Tecnicas de Ciberdefensa y Ciberataque | Tarea 3</div>
+        <h1 style={{ fontSize: "clamp(1.5rem, 4vw, 2.2rem)", fontWeight: 300, lineHeight: 1.2, marginBottom: "0.5rem" }}>
+          Cronologia de la <span style={{ color: "#00e5a0", fontStyle: "italic" }}>Ciberguerra</span> Moderna
+        </h1>
+        <p style={{ fontSize: "0.85rem", color: "var(--dim)", maxWidth: 520, marginLeft: "auto", marginRight: "auto", lineHeight: 1.6 }}>
+          Identificando patrones y evolucion de la ciberguerra a traves de eventos historicos: tres ciberataques que redefinieron la guerra digital y el derecho internacional.
+        </p>
+      </div>
+
       <HTimeline events={EVT} colors={allColors} minYear={2005} maxYear={2024} height={190} label="Linea de Tiempo Unificada (2005-2024)" />
 
       {/* Legend */}
       <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap", marginBottom: "2rem", marginTop: "-0.5rem" }}>
         {Object.values(ATK).map((a) => (
-          <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 5, fontFamily: "monospace", fontSize: "0.58rem", color: "var(--dim)" }}>
+          <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 5, fontFamily: "monospace", fontSize: "0.6rem", color: "var(--dim)" }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: a.color, boxShadow: "0 0 6px " + a.color }} />[{a.flag}] {a.name}
           </div>
         ))}
@@ -451,8 +464,8 @@ function OverviewPage() {
       <Evolution />
 
       {/* Comparative table */}
-      <h3 style={{ fontSize: "1rem", fontWeight: 400, textAlign: "center", marginBottom: "0.25rem" }}>Analisis Comparativo</h3>
-      <p style={{ textAlign: "center", fontSize: "0.7rem", color: "var(--dim)", marginBottom: "1rem" }}>Comparacion de los tres ciberataques segun multiples dimensiones</p>
+      <h3 style={{ fontSize: "1.1rem", fontWeight: 400, textAlign: "center", marginBottom: "0.3rem" }}>Analisis Comparativo</h3>
+      <p style={{ textAlign: "center", fontSize: "0.75rem", color: "var(--dim)", marginBottom: "1.2rem" }}>Comparacion de los tres ciberataques segun multiples dimensiones</p>
       <div style={{ overflowX: "auto", marginBottom: "2rem" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.76rem" }}>
           <thead>
@@ -482,12 +495,24 @@ function OverviewPage() {
         </table>
       </div>
 
-      {/* References */}
-      <div style={{ padding: "1rem", background: "var(--card)", borderRadius: 12, border: "1px solid var(--bdr)" }}>
-        <h3 style={{ fontSize: "0.8rem", fontWeight: 400, marginBottom: "0.6rem", textAlign: "center" }}>Referencias Academicas</h3>
-        <div style={{ columns: 2, columnGap: "1.5rem", fontSize: "0.6rem", color: "var(--dim)", lineHeight: 1.9 }}>
+    </div>
+  );
+}
+
+// ====== REFERENCES PAGE ======
+function ReferencesPage() {
+  return (
+    <div>
+      <div style={{ textAlign: "center", marginBottom: "1.5rem", paddingTop: "0.5rem" }}>
+        <h2 style={{ fontSize: "1.3rem", fontWeight: 300, marginBottom: "0.4rem" }}>Referencias Academicas</h2>
+        <p style={{ fontSize: "0.75rem", color: "var(--dim)" }}>Fuentes utilizadas para la investigacion y construccion de la linea de tiempo</p>
+      </div>
+      <div style={{ padding: "1.5rem", background: "var(--card)", borderRadius: 12, border: "1px solid var(--bdr)" }}>
+        <div style={{ fontSize: "0.72rem", color: "var(--dim)", lineHeight: 2.2 }}>
           {REFS.map((r, i) => (
-            <p key={i} style={{ breakInside: "avoid", marginBottom: 2 }}>{i + 1}. {r}</p>
+            <p key={i} style={{ marginBottom: 6, paddingLeft: "1.5rem", textIndent: "-1.5rem" }}>
+              <span style={{ fontFamily: "monospace", color: "var(--text)", fontWeight: 600 }}>[{i + 1}]</span> {r}
+            </p>
           ))}
         </div>
       </div>
@@ -509,6 +534,7 @@ function App() {
     { key: "stuxnet", label: "STUXNET", color: "#00e5a0" },
     { key: "wannacry", label: "WANNACRY", color: "#ff3366" },
     { key: "solarwinds", label: "SOLARWINDS", color: "#ffaa00" },
+    { key: "refs", label: "REFERENCIAS", color: "#8888aa" },
   ];
 
   return (
@@ -555,6 +581,12 @@ function App() {
         <div style={{ animation: "fadeIn 0.4s" }}>
           {/* NAV BAR */}
           <div style={{ position: "sticky", top: 0, zIndex: 100, background: dark ? "rgba(10,10,15,0.94)" : "rgba(244,244,247,0.95)", backdropFilter: "blur(12px)", borderBottom: "1px solid var(--bdr)", padding: "0", display: "flex", justifyContent: "space-between", alignItems: "stretch" }}>
+            <button onClick={() => setPage("hero")}
+              style={{ fontSize: "0.7rem", padding: "0 0.6rem", border: "none", borderRight: "1px solid var(--bdr)", background: "transparent", cursor: "pointer", color: "var(--dim)", fontFamily: "monospace", letterSpacing: "0.05em", transition: "all 0.2s", whiteSpace: "nowrap" }}
+              onMouseEnter={(e) => { e.target.style.color = "#00e5a0"; }}
+              onMouseLeave={(e) => { e.target.style.color = "var(--dim)"; }}>
+              {"<"} INICIO
+            </button>
             <div style={{ display: "flex", flex: 1 }}>
               {navItems.map((item) => {
                 const active = page === item.key;
@@ -591,6 +623,7 @@ function App() {
             {page === "stuxnet" && <AttackPage ak="stuxnet" />}
             {page === "wannacry" && <AttackPage ak="wannacry" />}
             {page === "solarwinds" && <AttackPage ak="solarwinds" />}
+            {page === "refs" && <ReferencesPage />}
 
             {/* Footer */}
             <div style={{ textAlign: "center", padding: "1.5rem 0 1rem", fontSize: "0.58rem", color: "var(--dim)", borderTop: "1px solid var(--bdr)", marginTop: "2rem" }}>
