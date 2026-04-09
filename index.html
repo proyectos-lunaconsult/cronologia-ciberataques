@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cronologia de Ciberataques Historicos - Stuxnet, WannaCry, SolarWinds</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0f; }
+#root { min-height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+
+// ============================================================
+// DATA
+// ============================================================
+
+const ATTACKS = {
+  stuxnet: {
+    id: "stuxnet",
+    name: "Stuxnet",
+    year: "2010",
+    color: "#00e5a0",
+    flag: "US/IL",
+    attrib: "EE.UU. + Israel",
+    victim: "IR - Iran",
+    tagline: "Primera arma cibernetica con efecto cinetico",
+    paradigm: "Sabotaje de infraestructura critica",
+  },
+  wannacry: {
+    id: "wannacry",
+    name: "WannaCry",
+    year: "2017",
+    color: "#ff3366",
+    flag: "KP",
+    attrib: "Corea del Norte (Lazarus / RGB)",
+    victim: "150+ paises",
+    tagline: "Ransomware autopropagable de alcance global",
+    paradigm: "Ransomware como arma estatal",
+  },
+  solarwinds: {
+    id: "solarwinds",
+    name: "SolarWinds",
+    year: "2020",
+    color: "#ffaa00",
+    flag: "RU",
+    attrib: "Rusia (SVR / APT29 / Cozy Bear)",
+    victim: "US - EE.UU.",
+    tagline: "Espionaje masivo via cadena de suministro",
+    paradigm: "Supply-chain como vector de espionaje",
+  },
+};
+
+const DETAIL = {
+  stuxnet: {
+    context:
+      'En 2002, disidentes iranies revelaron la planta de enriquecimiento de Natanz. La ONU impuso sanciones desde 2006. EE.UU. e Israel desarrollaron conjuntamente la Operacion "Olympic Games" bajo Bush (2006) y Obama (2009). Un ingeniero holandes (AIVD) infiltro Natanz en diciembre de 2008 para instalar el vector USB inicial. El objetivo: sabotear el programa nuclear irani sin recurrir a un ataque militar convencional, en un contexto donde las opciones diplomaticas se agotaban y la amenaza de un ataque israelí convencional era real.',
+    techniques: [
+      "4 zero-days de Windows simultaneos (CVE-2010-2568, 2729, 3338, 2743)",
+      "Propagacion via USB contra redes air-gapped",
+      "Suplantacion de DLL Siemens (s7otbxdx.dll) - Man-in-the-Middle industrial",
+      "Inyeccion de codigo en PLCs Siemens S7-315-2 y S7-417",
+      "Manipulacion de frecuencia de variadores Vacon/Fararo Paya (807-1.410 Hz)",
+      "Primer rootkit de PLC: reproducia datos normales en HMI mientras destruia centrifugadoras",
+      "Drivers firmados con certificados robados de Realtek y JMicron",
+    ],
+    impact: [
+      "~1.000 centrifugadoras IR-1 destruidas (20% de las operativas en Natanz)",
+      "Retraso de 2-4 anios del programa nuclear irani",
+      "200.000 computadoras infectadas (60% en Iran)",
+      "Iran creo Consejo Supremo del Ciberespacio; expandio capacidades ofensivas (Shamoon, Op. Ababil)",
+      'Manual de Tallinn (NATO CCDCOE, 2013): 95 reglas de derecho internacional cibernetico',
+      '"Acto de fuerza" ilegal bajo Art. 2(4) Carta de la ONU segun expertos unanimes',
+      "Catalizo creacion de cibercomandos militares en multiples naciones",
+    ],
+    stats: [
+      { value: 4, label: "Zero-days simultaneos" },
+      { value: 1000, label: "Centrifugadoras destruidas", prefix: "~" },
+      { value: 200, label: "Mil PCs infectadas", suffix: "K" },
+      { value: 4, label: "Anios retraso nuclear", prefix: "2-" },
+    ],
+    mitre: "S0603",
+    mitreTags: [
+      { code: "T0832", name: "Manipulation of View", desc: "Stuxnet grababa 21 segundos de datos normales de sensores y los reproducia en las pantallas HMI de los operadores mientras las centrifugadoras eran destruidas. Los tecnicos nunca vieron anomalias." },
+      { code: "T0831", name: "Manipulation of Control", desc: "El malware alteraba las frecuencias de los variadores de velocidad, elevandolas a 1.410 Hz por 15 minutos y luego reduciendolas a 2 Hz por 50 minutos, causando estres mecanico fatal en las centrifugadoras IR-1." },
+      { code: "T0889", name: "Modify Program", desc: "Stuxnet inyecto bloques de codigo malicioso en OB1 (ejecucion ciclica), OB35 (watchdog) y DB890 (Profibus) de los PLCs Siemens, creando funciones FC1873 y FC1874 para controlar el sabotaje." },
+      { code: "T0851", name: "Rootkit", desc: "Primer rootkit de PLC documentado en la historia. Interceptaba toda comunicacion entre WinCC/STEP 7 y los controladores mediante la sustitucion de la DLL s7otbxdx.dll, ejecutando un ataque MitM industrial." },
+      { code: "T1091", name: "Replication via Removable Media", desc: "Vector de infeccion primario: memorias USB introducidas en Natanz por un agente de la AIVD (inteligencia holandesa). Explotaba CVE-2010-2568 (vulnerabilidad LNK de Windows Shell)." },
+      { code: "T1210", name: "Exploitation of Remote Services", desc: "Una vez dentro de la red, Stuxnet explotaba CVE-2008-4250 (MS08-067, misma vuln. de Conficker) y CVE-2010-2729 (Print Spooler) para movimiento lateral entre equipos Windows." },
+      { code: "T1553.002", name: "Code Signing", desc: "Los drivers de Stuxnet fueron firmados con certificados digitales robados de Realtek Semiconductor (25 ene 2010) y JMicron Technology (17 jul 2010), eludiendo verificaciones de integridad del SO." },
+      { code: "T1055", name: "Process Injection", desc: "Stuxnet inyectaba codigo en multiples procesos del sistema Windows para escalar privilegios y ocultar su presencia, utilizando las vulnerabilidades del Task Scheduler (CVE-2010-3338) y Win32k.sys (CVE-2010-2743)." },
+    ],
+  },
+  wannacry: {
+    context:
+      'En agosto de 2016, "Shadow Brokers" robo y filtro herramientas de la NSA, incluyendo EternalBlue. Microsoft parcho CVE-2017-0144 el 14 de marzo de 2017 (MS17-010), pero millones de sistemas permanecieron sin actualizar. 28 dias despues de la publicacion del exploit, WannaCry lo armo. Atribuido al Grupo Lazarus de Corea del Norte (RGB), un estado bajo severas sanciones que usa ciberoperaciones como fuente de financiamiento y proyeccion de poder asimetrico. El incidente evidencio el riesgo catastrofico de que agencias de inteligencia acumulen vulnerabilidades sin divulgarlas.',
+    techniques: [
+      "Exploit EternalBlue (CVE-2017-0144) contra SMBv1, puerto TCP 445",
+      "Backdoor DoublePulsar a nivel kernel para inyeccion remota",
+      "Cryptoworm: ransomware + gusano autopropagable sin interaccion del usuario",
+      "Cifrado hibrido RSA-2048 + AES-128-CBC por archivo (176 extensiones)",
+      "Eliminacion de Shadow Copies y deshabilitacion de recuperacion de Windows",
+      "Kill switch: consulta DNS a dominio hardcodeado (tecnica anti-sandbox)",
+      "Escaneo de redes /24 + IPs aleatorias buscando puerto 445 abierto",
+    ],
+    impact: [
+      "200.000+ sistemas infectados en 150+ paises en ~24 horas",
+      "NHS (UK): 81 trusts afectados, ~19.000 citas canceladas, 92M libras en perdidas",
+      "Telefonica, FedEx, Renault, Deutsche Bahn, PetroChina afectados",
+      "$4-8 mil millones en perdidas globales estimadas",
+      "EE.UU. atribuyo formalmente a Corea del Norte (dic 2017); UK, AU, CA se sumaron",
+      "DOJ imputo a Park Jin Hyok (2018) y 3 hackers norcoreanos (2021)",
+      "OFAC sanciono a Lazarus, Bluenoroff y Andariel (2019)",
+    ],
+    stats: [
+      { value: 200, label: "Mil sistemas infectados", suffix: "K+" },
+      { value: 150, label: "Paises afectados", suffix: "+" },
+      { value: 4, label: "Mil millones USD perdidas", prefix: "$", suffix: "-8B" },
+      { value: 140, label: "Rescate recaudado USD", prefix: "$", suffix: "K" },
+    ],
+    mitre: "S0366",
+    mitreTags: [
+      { code: "T1190", name: "Exploit Public-Facing App", desc: "WannaCry explotaba el puerto TCP 445 (SMBv1) expuesto a Internet. Escaneaba subredes /24 completas y generaba IPs aleatorias globales para encontrar victimas con el puerto abierto." },
+      { code: "T1210", name: "Exploitation of Remote Services", desc: "EternalBlue (CVE-2017-0144) era el motor de propagacion: un exploit de buffer overflow en SMBv1 desarrollado por la NSA y filtrado por Shadow Brokers. Permitia ejecucion remota de codigo sin autenticacion." },
+      { code: "T1486", name: "Data Encrypted for Impact", desc: "Cifrado hibrido RSA-2048 + AES-128-CBC: cada archivo recibia una clave AES unica cifrada con la clave publica RSA de la infeccion. 176 extensiones de archivo atacadas. Rescate: $300-600 en BTC." },
+      { code: "T1490", name: "Inhibit System Recovery", desc: "WannaCry ejecutaba: vssadmin delete shadows /all /quiet, wmic shadowcopy delete, y bcdedit /set recoveryenabled no, eliminando toda posibilidad de restauracion sin la clave de descifrado." },
+      { code: "T1059.003", name: "Windows Command Shell", desc: "El ransomware usaba cmd.exe para ejecutar comandos de eliminacion de copias de seguridad, modificar configuracion de arranque, y gestionar sus propios procesos de cifrado y comunicacion." },
+      { code: "T1569.002", name: "Service Execution", desc: "WannaCry se instalaba como servicio de Windows (mssecsvc2.0 con display name 'Microsoft Security Center 2.0') para garantizar persistencia y ejecucion con privilegios SYSTEM." },
+      { code: "T1016", name: "System Network Config Discovery", desc: "El componente worm enumeraba todas las interfaces de red y sus rangos IP para identificar objetivos de propagacion en la red local antes de intentar explotar SMBv1 en cada host descubierto." },
+    ],
+  },
+  solarwinds: {
+    context:
+      'Atribuido con "alta confianza" al SVR ruso (APT29/Cozy Bear). Mandiant fusiono su designacion UNC2452 con APT29. A diferencia de NotPetya (GRU, destructivo), SolarWinds fue espionaje puro a escala industrial. Los atacantes comprometieron el entorno de compilacion en septiembre de 2019, inyectaron SUNBURST en actualizaciones firmadas digitalmente y mantuvieron acceso encubierto durante 14+ meses. Brad Smith (Microsoft) lo califico como "el ataque mas grande y sofisticado que el mundo haya visto jamas".',
+    techniques: [
+      "Compromiso del entorno de compilacion (implante SUNSPOT - taskhostsvc.exe)",
+      "Backdoor SUNBURST inyectado en DLL legitima, firmada digitalmente por SolarWinds",
+      "Algoritmo de generacion de dominios (DGA) bajo avsvmcloud[.]com",
+      "C2 mimetizando trafico legitimo del Orion Improvement Program",
+      "Dormancia 12-14 dias; verificacion anti-sandbox antes de activacion",
+      "Payloads: TEARDROP > Cobalt Strike BEACON; RAINDROP; GoldMax/SUNSHUTTLE",
+      "Golden SAML para falsificacion de tokens y compromiso de Azure AD/M365",
+    ],
+    impact: [
+      "~18.000 organizaciones descargaron la actualizacion comprometida",
+      "9 agencias federales de EE.UU. comprometidas (Tesoro, DOE/NNSA, DHS, Estado, DOJ)",
+      "~100 empresas: FireEye, Microsoft, Cisco, Intel, Deloitte",
+      "~$100 mil millones en costos estimados de remediacion",
+      "CISA emitio Directiva de Emergencia 21-01 (13 dic 2020)",
+      "Sanciones: expulsion de 10 diplomaticos rusos + 6 empresas tecnologicas sancionadas",
+      "EO 14028 (mayo 2021): SBOM obligatorio, Zero Trust; SEC imputo al CISO (oct 2023)",
+    ],
+    stats: [
+      { value: 18, label: "Mil organizaciones afectadas", suffix: "K" },
+      { value: 9, label: "Agencias federales" },
+      { value: 14, label: "Meses sin deteccion" },
+      { value: 100, label: "Mil millones USD remediacion", prefix: "~$", suffix: "B" },
+    ],
+    mitre: "S0559",
+    mitreTags: [
+      { code: "T1195.002", name: "Supply Chain Compromise", desc: "Los atacantes comprometieron el entorno de compilacion de SolarWinds e inyectaron SUNBURST en la DLL SolarWinds.Orion.Core.BusinessLayer.dll. Las actualizaciones fueron firmadas con el certificado legitimo de SolarWinds y distribuidas a ~18.000 clientes." },
+      { code: "T1071.001", name: "Web Protocols", desc: "SUNBURST comunicaba con su C2 usando HTTP/HTTPS que imitaba trafico legitimo del Orion Improvement Program. Los atacantes usaron infraestructura ubicada en EE.UU. para evadir deteccion por geolocalizacion." },
+      { code: "T1568.002", name: "Domain Generation Algorithms", desc: "SUNBURST generaba subdominios bajo avsvmcloud[.]com codificando informacion de la victima (hostname, dominio, productos de seguridad) en las etiquetas del subdominio. Las respuestas DNS CNAME dirigian al C2 apropiado." },
+      { code: "T1070.006", name: "Timestomp", desc: "El malware modificaba las marcas de tiempo de los archivos (timestomping) para coincidir con archivos legitimos del sistema, dificultando el analisis forense y la deteccion de archivos anomalos." },
+      { code: "T1078", name: "Valid Accounts", desc: "Los atacantes robaban credenciales validas para movimiento lateral, incluyendo cuentas de Domain Administrator. En algunos casos, obtuvieron privilegios de DA en menos de 12 horas desde el acceso inicial." },
+      { code: "T1606.002", name: "SAML Tokens", desc: "Tecnica 'Golden SAML': los atacantes robaban certificados de firma ADFS para falsificar tokens SAML, obteniendo acceso a recursos de Microsoft 365 y Azure AD sin necesidad de credenciales de usuario." },
+      { code: "T1027", name: "Obfuscated Files", desc: "SUNBURST ocultaba su codigo dentro de una clase nombrada OrionImprovementBusinessLayer, mimetizando el legitimo Orion Improvement Program. Incluia dormancia de 12-14 dias y verificacion de ausencia de herramientas de seguridad." },
+      { code: "T1518.001", name: "Security Software Discovery", desc: "Antes de activarse, SUNBURST verificaba la ausencia de productos antimalware, herramientas forenses y entornos sandbox. Si detectaba cualquiera de ellos, permanecia inactivo indefinidamente." },
+    ],
+  },
+};
+
+const ALL_EVENTS = [
+  { id: 1, attack: "stuxnet", y: 2005, date: "~2005", title: "Inicio del desarrollo de Stuxnet", desc: 'EE.UU. e Israel comienzan desarrollo conjunto bajo "Olympic Games".', major: false },
+  { id: 2, attack: "stuxnet", y: 2006, date: "2006", title: "Lanzamiento de Olympic Games", desc: "Gral. Cartwright presenta el concepto a Bush. Pruebas en Dimona (Israel) con centrifugadoras P-1.", major: true },
+  { id: 3, attack: "stuxnet", y: 2008.9, date: "Dic 2008", title: "Infiltracion fisica de Natanz", desc: "Erik van Sabben (AIVD) presuntamente instala el vector USB dentro de la planta de enriquecimiento.", major: true },
+  { id: 4, attack: "stuxnet", y: 2009.5, date: "Jun 2009", title: "Primera muestra en estado libre", desc: "Version 1.001 aparece fuera de Natanz, indicando propagacion no intencional.", major: false },
+  { id: 5, attack: "stuxnet", y: 2010.45, date: "17 Jun 2010", title: "VirusBlokAda descubre el malware", desc: "Empresa bielorrusa detecta Stuxnet en una PC irani con reinicios repetitivos.", major: true },
+  { id: 6, attack: "stuxnet", y: 2010.7, date: "Sep 2010", title: "Langner identifica objetivo: Natanz", desc: "Ralph Langner decodifica el payload: ataca centrifugadoras de enriquecimiento de uranio.", major: true },
+  { id: 7, attack: "stuxnet", y: 2010.9, date: "29 Nov 2010", title: "Ahmadinejad reconoce el virus", desc: "Presidente irani admite publicamente que software malintencionado causo problemas.", major: false },
+  { id: 8, attack: "stuxnet", y: 2011.1, date: "Feb 2011", title: "Symantec publica Stuxnet Dossier v1.4", desc: "Analisis tecnico de 69 paginas detallando zero-days, PLC injection, rootkit industrial.", major: false },
+  { id: 9, attack: "stuxnet", y: 2012.4, date: "1 Jun 2012", title: "Sanger revela Olympic Games (NYT)", desc: "Confirma autoria EE.UU.-Israel. Snowden lo corrobora en 2013.", major: true },
+  { id: 10, attack: "stuxnet", y: 2013.2, date: "15 Mar 2013", title: "Publicacion del Manual de Tallinn", desc: 'NATO CCDCOE: 95 reglas de derecho internacional cibernetico. Stuxnet = "acto de fuerza" ilegal.', major: true },
+
+  { id: 20, attack: "wannacry", y: 2016.6, date: "13 Ago 2016", title: "Shadow Brokers anuncian herramientas NSA", desc: "Publican muestra parcial del arsenal del Equation Group (TAO/NSA).", major: true },
+  { id: 21, attack: "wannacry", y: 2017.2, date: "14 Mar 2017", title: "Microsoft publica MS17-010", desc: "Parche para CVE-2017-0144 (SMBv1). Millones de sistemas permanecen sin actualizar.", major: true },
+  { id: 22, attack: "wannacry", y: 2017.28, date: "14 Abr 2017", title: "Shadow Brokers publican EternalBlue", desc: "Arsenal completo disponible: EternalBlue, DoublePulsar, FUZZBUNCH.", major: true },
+  { id: 23, attack: "wannacry", y: 2017.36, date: "12 May 2017, 07:44 UTC", title: "Inicio del ataque WannaCry", desc: "Propagacion global autonoma via EternalBlue. 150+ paises en horas.", major: true },
+  { id: 24, attack: "wannacry", y: 2017.362, date: "12 May 2017, ~15:03 UTC", title: "Marcus Hutchins activa el kill switch", desc: "Investigador de 22 anios registra dominio del kill switch. Evita ~1M infecciones adicionales.", major: true },
+  { id: 25, attack: "wannacry", y: 2017.37, date: "13 May 2017", title: "Microsoft parchea Windows XP de emergencia", desc: "Parche inusual para XP y Server 2003, sin soporte oficial desde 2014.", major: false },
+  { id: 26, attack: "wannacry", y: 2017.8, date: "27 Oct 2017", title: "NAO publica informe WannaCry-NHS", desc: "81 trusts, 19.000 citas canceladas, 92M libras en perdidas documentadas.", major: false },
+  { id: 27, attack: "wannacry", y: 2017.95, date: "18 Dic 2017", title: "Atribucion formal a Corea del Norte", desc: "Thomas Bossert publica atribucion oficial. UK, AU, CA, NZ, JP se suman.", major: true },
+  { id: 28, attack: "wannacry", y: 2018.7, date: "6 Sep 2018", title: "DOJ imputa a Park Jin Hyok", desc: "Programador norcoreano (RGB) imputado por WannaCry, Sony y Banco de Bangladesh.", major: true },
+  { id: 29, attack: "wannacry", y: 2021.13, date: "17 Feb 2021", title: "DOJ amplia imputacion", desc: "3 hackers norcoreanos acusados de robar/extorsionar mas de $1.300 millones.", major: false },
+
+  { id: 40, attack: "solarwinds", y: 2019.67, date: "4 Sep 2019", title: "Acceso inicial a red de SolarWinds", desc: "APT29 compromete la red corporativa e inicia reconocimiento de sistemas de compilacion.", major: true },
+  { id: 41, attack: "solarwinds", y: 2020.14, date: "~20 Feb 2020", title: "Implante SUNSPOT desplegado", desc: "SUNSPOT secuestra automaticamente las compilaciones de Orion.", major: false },
+  { id: 42, attack: "solarwinds", y: 2020.23, date: "26 Mar 2020", title: "Primera actualizacion comprometida", desc: "Orion v2019.4 HF5 con SUNBURST firmado digitalmente se distribuye a ~18.000 clientes.", major: true },
+  { id: 43, attack: "solarwinds", y: 2020.37, date: "May 2020", title: "Movimiento lateral en objetivos", desc: "TEARDROP, Cobalt Strike BEACON y Golden SAML en redes de alto valor.", major: false },
+  { id: 44, attack: "solarwinds", y: 2020.42, date: "4 Jun 2020", title: "Atacantes eliminan SUNBURST", desc: "Backdoor removido del codigo fuente para reducir superficie de deteccion.", major: false },
+  { id: 45, attack: "solarwinds", y: 2020.93, date: "8 Dic 2020", title: "FireEye revela la brecha", desc: "Kevin Mandia publica el descubrimiento. Comienza la mayor investigacion de ciberseguridad.", major: true },
+  { id: 46, attack: "solarwinds", y: 2020.95, date: "13 Dic 2020", title: "CISA emite Directiva de Emergencia 21-01", desc: "Todas las agencias federales deben desconectar SolarWinds Orion inmediatamente.", major: true },
+  { id: 47, attack: "solarwinds", y: 2020.96, date: "17 Dic 2020", title: "Kill switch DNS activado", desc: "FireEye, Microsoft y GoDaddy neutralizan comunicaciones C2 de SUNBURST.", major: false },
+  { id: 48, attack: "solarwinds", y: 2021.28, date: "15 Abr 2021", title: "Atribucion formal al SVR; sanciones", desc: "EE.UU. atribuye a APT29/SVR. Expulsa 10 diplomaticos rusos, sanciona 6 empresas.", major: true },
+  { id: 49, attack: "solarwinds", y: 2021.36, date: "12 May 2021", title: "Biden firma Orden Ejecutiva 14028", desc: "SBOM obligatorio, Zero Trust, NIST SP 800-218, Cybersecurity Safety Review Board.", major: true },
+  { id: 50, attack: "solarwinds", y: 2023.82, date: "30 Oct 2023", title: "SEC imputa a SolarWinds y CISO", desc: "Primera imputacion SEC contra un CISO por deficiencias de ciberseguridad.", major: true },
+];
+
+const COMPARE_ROWS = [
+  ["Tipo de ataque", "Arma cibernetica cinetica", "Ransomware autopropagable", "Supply chain attack"],
+  ["Atribucion", "EE.UU. + Israel (Olympic Games)", "Corea del Norte (Lazarus / RGB)", "Rusia (SVR / APT29)"],
+  ["Motivacion", "Sabotaje estrategico-militar", "Financiera + desestabilizacion", "Espionaje estatal"],
+  ["Vector de acceso", "USB en red air-gapped", "Exploit remoto SMBv1 (EternalBlue)", "Actualizacion de software firmado"],
+  ["Propagacion", "USB + red (limitada por diseno)", "Autonoma, 150+ paises en horas", "Via actualizaciones legitimas"],
+  ["Impacto principal", "~1.000 centrifugadoras destruidas", "200K+ sistemas; $4-8B perdidas", "9 agencias federales; ~$100B"],
+  ["Duracion sin deteccion", "~1 anio activo (5 anios desarrollo)", "Horas (propagacion masiva)", "14+ meses encubierto"],
+  ["Respuesta legal clave", "Manual de Tallinn (2013)", "Atribucion estatal + imputaciones DOJ", "EO 14028 (SBOM, Zero Trust) + SEC vs CISO"],
+  ["MITRE ATT&CK", "S0603 (Enterprise + ICS)", "S0366 (Enterprise)", "S0559 (Enterprise)"],
+  ["Paradigma", "Estado vs. infraestructura critica", "Estado vs. sociedad civil global", "Estado vs. cadena de confianza digital"],
+];
+
+const REFS = [
+  "Symantec. W32.Stuxnet Dossier, v1.4 (2011).",
+  'Langner, R. "To Kill a Centrifuge" (2013).',
+  "Zetter, K. Countdown to Zero Day. Crown, 2014.",
+  "Lindsay, J.R. Security Studies 22(3), 2013.",
+  "Schmitt, M.N. Tallinn Manual. Cambridge UP, 2013/2017.",
+  "MITRE ATT&CK: S0603, S0366, S0559.",
+  "NAO. WannaCry & NHS, HC 414 (2017).",
+  "Ghafur et al. npj Digital Medicine (2019).",
+  "DOJ: Park Jin Hyok (2018); ampliacion (2021).",
+  "FireEye/Mandiant. SUNBURST Analysis (dic 2020).",
+  "CrowdStrike. SUNSPOT Analysis (ene 2021).",
+  "EO 14028, 86 FR 26633 (mayo 2021).",
+  "CISA ED 21-01; Alert AA20-352A.",
+  "GAO-22-104746.",
+  "Coco et al. EJIL 33(4), 2022.",
+  "SEC Complaint 2023-227.",
+];
+
+// ============================================================
+// HOOKS
+// ============================================================
+
+function useCounter(target, duration, active) {
+  const [val, setVal] = useState(0);
+  const started = useRef(false);
+
+  useEffect(() => {
+    if (!active || started.current) {
+      return;
+    }
+    started.current = true;
+    const startTime = performance.now();
+    const dur = duration || 1600;
+
+    function step(now) {
+      const progress = Math.min((now - startTime) / dur, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setVal(Math.round(target * eased));
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      }
+    }
+
+    requestAnimationFrame(step);
+  }, [active, target, duration]);
+
+  return val;
+}
+
+function useInView() {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    const observer = new IntersectionObserver(
+      function (entries) {
+        if (entries[0].isIntersecting) {
+          setVisible(true);
+        }
+      },
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return function () {
+      observer.disconnect();
+    };
+  }, []);
+
+  return [ref, visible];
+}
+
+function formatNum(n) {
+  if (n >= 1000) {
+    return (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1) + "K";
+  }
+  return String(n);
+}
+
+// ============================================================
+// SMALL COMPONENTS
+// ============================================================
+
+function AnimatedStat({ value, label, prefix, suffix, color, active }) {
+  const animated = useCounter(value, 1600, active);
+  const display = value >= 1000 ? formatNum(animated) : animated;
+
+  return (
+    <div
+      style={{
+        textAlign: "center",
+        padding: "1rem 0.5rem",
+        background: "var(--card)",
+        borderRadius: 10,
+        border: "1px solid var(--bdr)",
+      }}
+    >
+      <div
+        style={{
+          fontFamily: "monospace",
+          fontSize: "1.35rem",
+          fontWeight: 700,
+          color: color,
+        }}
+      >
+        {prefix || ""}
+        {display}
+        {suffix || ""}
+      </div>
+      <div style={{ fontSize: "0.6rem", color: "var(--dim)", marginTop: 4 }}>
+        {label}
+      </div>
+    </div>
+  );
+}
+
+function MitreTag({ tag, color, forceOpen }) {
+  const [open, setOpen] = useState(false);
+  const isOpen = forceOpen || open;
+
+  return (
+    <div style={{ display: "inline-block" }}>
+      <span
+        onClick={() => setOpen(!open)}
+        style={{
+          fontFamily: "monospace",
+          fontSize: "0.57rem",
+          padding: "0.25rem 0.5rem",
+          borderRadius: 4,
+          border: "1px solid " + (isOpen ? color : "var(--bdr)"),
+          color: isOpen ? color : "var(--dim)",
+          background: isOpen ? color + "15" : "transparent",
+          cursor: "pointer",
+          transition: "all 0.2s",
+          display: "inline-block",
+          userSelect: "none",
+        }}
+      >
+        <span style={{ color: color, fontWeight: 700 }}>{tag.code}</span>{" "}
+        {tag.name}{" "}
+        <span style={{ fontSize: "0.5rem", opacity: 0.6 }}>
+          {isOpen ? "[-]" : "[+]"}
+        </span>
+      </span>
+      {isOpen && (
+        <div
+          style={{
+            marginTop: 4,
+            marginBottom: 6,
+            padding: "0.5rem 0.65rem",
+            background: color + "08",
+            borderLeft: "2px solid " + color,
+            borderRadius: "0 6px 6px 0",
+            fontSize: "0.7rem",
+            color: "var(--dim)",
+            lineHeight: 1.65,
+            maxWidth: 500,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "monospace",
+              fontSize: "0.5rem",
+              color: color,
+              marginBottom: 3,
+              letterSpacing: "0.08em",
+            }}
+          >
+            {tag.code} | {tag.name}
+          </div>
+          {tag.desc}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TimelineEvent({ ev, color, isOpen, onClick }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        cursor: "pointer",
+        position: "relative",
+        paddingLeft: "2rem",
+        marginBottom: "0.55rem",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 6,
+          width: ev.major ? 14 : 10,
+          height: ev.major ? 14 : 10,
+          borderRadius: "50%",
+          background: ev.major ? color : "transparent",
+          border: "2px solid " + color,
+          boxShadow: ev.major ? "0 0 8px " + color : "none",
+          transition: "all 0.3s",
+          transform: isOpen ? "scale(1.3)" : "scale(1)",
+        }}
+      />
+      <div
+        style={{
+          fontFamily: "monospace",
+          fontSize: "0.6rem",
+          color: color,
+          letterSpacing: "0.04em",
+        }}
+      >
+        {ev.date}
+      </div>
+      <div
+        style={{
+          fontWeight: 600,
+          fontSize: "0.85rem",
+          marginTop: 1,
+          color: "var(--text)",
+        }}
+      >
+        {ev.title}
+      </div>
+      <div
+        style={{
+          maxHeight: isOpen ? 200 : 0,
+          overflow: "hidden",
+          transition: "max-height 0.4s ease, opacity 0.3s",
+          opacity: isOpen ? 1 : 0,
+          marginTop: isOpen ? 5 : 0,
+        }}
+      >
+        <div
+          style={{
+            fontSize: "0.76rem",
+            color: "var(--dim)",
+            lineHeight: 1.6,
+            padding: "0.4rem 0.7rem",
+            background: color + "10",
+            borderRadius: 8,
+            borderLeft: "2px solid " + color,
+          }}
+        >
+          {ev.desc}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// HORIZONTAL TIMELINE
+// ============================================================
+
+function HorizontalTimeline({ filters }) {
+  const scrollRef = useRef(null);
+  const filtered = ALL_EVENTS.filter((e) => filters.includes(e.attack));
+  const [selected, setSelected] = useState(null);
+  const [dragging, setDragging] = useState(false);
+  const startX = useRef(0);
+  const scrollLeft = useRef(0);
+  const minY = 2005;
+  const maxY = 2024;
+  const range = maxY - minY;
+
+  function handleDown(e) {
+    setDragging(true);
+    startX.current = e.pageX - scrollRef.current.offsetLeft;
+    scrollLeft.current = scrollRef.current.scrollLeft;
+  }
+  function handleUp() {
+    setDragging(false);
+  }
+  function handleMove(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    scrollRef.current.scrollLeft = scrollLeft.current - (x - startX.current);
+  }
+
+  const years = [];
+  for (let yr = minY; yr <= maxY; yr++) {
+    years.push(yr);
+  }
+
+  return (
+    <div style={{ marginBottom: "2rem" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "0.4rem",
+        }}
+      >
+        <h3
+          style={{
+            fontSize: "0.9rem",
+            fontWeight: 500,
+            color: "var(--text)",
+          }}
+        >
+          Linea de Tiempo Unificada (2005-2024)
+        </h3>
+        <span
+          style={{
+            fontFamily: "monospace",
+            fontSize: "0.5rem",
+            color: "var(--dim)",
+          }}
+        >
+          CLICK EN PUNTOS - ARRASTRA PARA NAVEGAR
+        </span>
+      </div>
+
+      <div
+        ref={scrollRef}
+        onMouseDown={handleDown}
+        onMouseUp={handleUp}
+        onMouseLeave={handleUp}
+        onMouseMove={handleMove}
+        style={{
+          overflowX: "auto",
+          cursor: dragging ? "grabbing" : "grab",
+          userSelect: "none",
+          padding: "0.5rem 0 1rem",
+        }}
+      >
+        <div
+          style={{
+            position: "relative",
+            width: Math.max(1400, filtered.length * 70),
+            height: 210,
+          }}
+        >
+          {/* Lane labels on the left */}
+          {Object.values(ATTACKS)
+            .filter((a) => filters.includes(a.id))
+            .map((a) => {
+              const laneY =
+                a.id === "stuxnet" ? 30 : a.id === "wannacry" ? 60 : 85;
+              return (
+                <div
+                  key={a.id + "-label"}
+                  style={{
+                    position: "absolute",
+                    left: -2,
+                    top: 100 - laneY - 5,
+                    fontFamily: "monospace",
+                    fontSize: "0.45rem",
+                    color: a.color,
+                    opacity: 0.5,
+                    letterSpacing: "0.08em",
+                    writingMode: "vertical-rl",
+                    transform: "rotate(180deg)",
+                  }}
+                >
+                  {a.name.toUpperCase()}
+                </div>
+              );
+            })}
+
+          {years.map((yr) => (
+            <div
+              key={yr}
+              style={{
+                position: "absolute",
+                left: ((yr - minY) / range) * 100 + "%",
+                top: 80,
+                height: 32,
+                width: 1,
+                background: yr % 5 === 0 ? "var(--dim)" : "var(--bdr)",
+                opacity: yr % 5 === 0 ? 0.4 : 0.2,
+              }}
+            >
+              <span
+                style={{
+                  position: "absolute",
+                  top: 36,
+                  left: -14,
+                  fontFamily: "monospace",
+                  fontSize: yr % 5 === 0 ? "0.6rem" : "0.45rem",
+                  fontWeight: yr % 5 === 0 ? 600 : 400,
+                  color: "var(--dim)",
+                  width: 28,
+                  textAlign: "center",
+                }}
+              >
+                {yr}
+              </span>
+            </div>
+          ))}
+
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top: 98,
+              height: 2,
+              background: "var(--bdr)",
+            }}
+          />
+
+          {filtered.map((ev) => {
+            const xPct = ((ev.y - minY) / range) * 100;
+            const color = ATTACKS[ev.attack].color;
+            const isSel = selected === ev.id;
+            const yOffset =
+              ev.attack === "stuxnet"
+                ? 25
+                : ev.attack === "wannacry"
+                ? 52
+                : 75;
+
+            return (
+              <div
+                key={ev.id}
+                onClick={() => setSelected(isSel ? null : ev.id)}
+                style={{
+                  position: "absolute",
+                  left: xPct + "%",
+                  top: 99 - yOffset,
+                  cursor: "pointer",
+                  zIndex: isSel ? 10 : 1,
+                  transition: "all 0.3s",
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    left: ev.major ? 6 : 4,
+                    top: ev.major ? 14 : 10,
+                    width: 1,
+                    height: yOffset - (ev.major ? 5 : 3),
+                    background: color + "40",
+                  }}
+                />
+                <div
+                  style={{
+                    width: ev.major ? 14 : 10,
+                    height: ev.major ? 14 : 10,
+                    borderRadius: "50%",
+                    background: ev.major ? color : "transparent",
+                    border: "2px solid " + color,
+                    boxShadow: isSel
+                      ? "0 0 14px " + color
+                      : ev.major
+                      ? "0 0 6px " + color
+                      : "none",
+                    transform: isSel ? "scale(1.5)" : "scale(1)",
+                    transition: "all 0.3s",
+                  }}
+                />
+                {isSel && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: -80,
+                      left: -95,
+                      width: 220,
+                      padding: "0.5rem",
+                      background: "var(--card)",
+                      border: "1px solid " + color + "40",
+                      borderRadius: 8,
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+                      zIndex: 20,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: "monospace",
+                        fontSize: "0.5rem",
+                        color: color,
+                      }}
+                    >
+                      [{ATTACKS[ev.attack].flag}] {ev.date}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.7rem",
+                        fontWeight: 600,
+                        color: "var(--text)",
+                        lineHeight: 1.3,
+                        marginTop: 2,
+                      }}
+                    >
+                      {ev.title}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.62rem",
+                        color: "var(--dim)",
+                        marginTop: 3,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {ev.desc}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: "1rem",
+          justifyContent: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        {Object.values(ATTACKS)
+          .filter((a) => filters.includes(a.id))
+          .map((a) => (
+            <div
+              key={a.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                fontFamily: "monospace",
+                fontSize: "0.6rem",
+                color: "var(--dim)",
+              }}
+            >
+              <div
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: a.color,
+                  boxShadow: "0 0 6px " + a.color,
+                }}
+              />
+              [{a.flag}] {a.name}
+            </div>
+          ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// EVOLUTION SECTION
+// ============================================================
+
+function EvolutionSection() {
+  const [ref, visible] = useInView();
+
+  const steps = [
+    {
+      color: ATTACKS.stuxnet.color,
+      icon: "01",
+      title: "USB > Red Air-Gapped",
+      sub: "Stuxnet (2010)",
+      desc: "Infiltracion fisica + propagacion limitada. Anios de desarrollo. Primer cruce digital-fisico.",
+    },
+    {
+      color: ATTACKS.wannacry.color,
+      icon: "02",
+      title: "Exploit Remoto > Global",
+      sub: "WannaCry (2017)",
+      desc: "Vulnerabilidad conocida (parcheada 59 dias antes). Propagacion autonoma. 150+ paises en horas.",
+    },
+    {
+      color: ATTACKS.solarwinds.color,
+      icon: "03",
+      title: "Supply Chain > Confianza",
+      sub: "SolarWinds (2020)",
+      desc: "Sin explotar CVEs: abusa de confianza en software firmado. 14+ meses invisible.",
+    },
+  ];
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        marginBottom: "2.5rem",
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(20px)",
+        transition: "all 0.8s",
+      }}
+    >
+      <h3
+        style={{
+          fontSize: "1rem",
+          fontWeight: 400,
+          textAlign: "center",
+          marginBottom: "0.3rem",
+          color: "var(--text)",
+        }}
+      >
+        Evolucion de la Ciberguerra
+      </h3>
+      <p
+        style={{
+          textAlign: "center",
+          fontSize: "0.75rem",
+          color: "var(--dim)",
+          marginBottom: "1.2rem",
+          maxWidth: 550,
+          marginLeft: "auto",
+          marginRight: "auto",
+        }}
+      >
+        Cada ataque escalo en sofisticacion, alcance y dificultad de deteccion.
+      </p>
+      <div
+        style={{
+          display: "flex",
+          gap: 0,
+          alignItems: "stretch",
+          flexWrap: "wrap",
+          justifyContent: "center",
+        }}
+      >
+        {steps.map((s, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center" }}>
+            <div
+              style={{
+                flex: "1 1 220px",
+                maxWidth: 260,
+                padding: "1.1rem",
+                background: "var(--card)",
+                border: "1px solid var(--bdr)",
+                borderRadius: 12,
+                transition: "all 0.3s",
+                opacity: visible ? 1 : 0,
+                transform: visible ? "translateY(0)" : "translateY(20px)",
+                transitionDelay: i * 0.2 + "s",
+                cursor: "default",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = s.color + "60";
+                e.currentTarget.style.transform = "translateY(-3px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "var(--bdr)";
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "1.4rem",
+                  fontWeight: 700,
+                  color: s.color,
+                  marginBottom: "0.4rem",
+                  opacity: 0.6,
+                }}
+              >
+                {s.icon}
+              </div>
+              <div
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "0.5rem",
+                  color: s.color,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  marginBottom: 3,
+                }}
+              >
+                {s.sub}
+              </div>
+              <div
+                style={{
+                  fontWeight: 600,
+                  fontSize: "0.88rem",
+                  marginBottom: 4,
+                  color: "var(--text)",
+                }}
+              >
+                {s.title}
+              </div>
+              <div
+                style={{
+                  fontSize: "0.73rem",
+                  color: "var(--dim)",
+                  lineHeight: 1.6,
+                }}
+              >
+                {s.desc}
+              </div>
+            </div>
+            {i < 2 && (
+              <div
+                style={{
+                  padding: "0 0.4rem",
+                  fontSize: "1.1rem",
+                  color: "var(--dim)",
+                }}
+              >
+                {">"}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// ATTACK DETAIL SECTION
+// ============================================================
+
+function AttackDetailSection({ attackKey, filters }) {
+  const a = ATTACKS[attackKey];
+  const d = DETAIL[attackKey];
+  const events = ALL_EVENTS.filter((e) => e.attack === attackKey);
+  const [tab, setTab] = useState("context");
+  const [openEvent, setOpenEvent] = useState(null);
+  const [expandAll, setExpandAll] = useState(false);
+  const [mitreExpand, setMitreExpand] = useState(false);
+  const [statsRef, statsVisible] = useInView();
+
+  if (!filters.includes(attackKey)) {
+    return null;
+  }
+
+  const tabButtons = [
+    { key: "context", label: "Contexto Geopolitico" },
+    { key: "techniques", label: "Tecnicas Utilizadas" },
+    { key: "impact", label: "Impacto y Respuesta" },
+  ];
+
+  return (
+    <div style={{ marginBottom: "2.5rem" }}>
+      {/* Header */}
+      <div
+        style={{
+          padding: "1.5rem",
+          borderRadius: 14,
+          background:
+            "linear-gradient(135deg, " + a.color + "08, var(--card))",
+          border: "1px solid " + a.color + "22",
+          textAlign: "center",
+          marginBottom: "1.2rem",
+        }}
+      >
+        <div
+          style={{
+            fontFamily: "monospace",
+            fontSize: "0.9rem",
+            fontWeight: 700,
+            color: a.color,
+            opacity: 0.5,
+            marginBottom: 4,
+          }}
+        >
+          [{a.flag}]
+        </div>
+        <div
+          style={{
+            fontFamily: "monospace",
+            fontSize: "0.55rem",
+            letterSpacing: "0.25em",
+            textTransform: "uppercase",
+            color: a.color,
+            marginBottom: 3,
+          }}
+        >
+          {a.year} | {a.paradigm}
+        </div>
+        <h2
+          style={{
+            fontSize: "1.7rem",
+            fontWeight: 300,
+            color: "var(--text)",
+          }}
+        >
+          {a.name}
+        </h2>
+        <p
+          style={{
+            fontSize: "0.78rem",
+            color: "var(--dim)",
+            marginTop: 3,
+          }}
+        >
+          {a.tagline}
+        </p>
+        <div
+          style={{
+            marginTop: 6,
+            fontFamily: "monospace",
+            fontSize: "0.62rem",
+          }}
+        >
+          <span style={{ color: "var(--dim)" }}>Atribucion: </span>
+          <span style={{ color: a.color }}>{a.attrib}</span>
+          <span style={{ margin: "0 6px", color: "var(--bdr)" }}>|</span>
+          <span style={{ color: "var(--dim)" }}>Victima: </span>
+          <span style={{ color: a.color }}>{a.victim}</span>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div
+        ref={statsRef}
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: "0.5rem",
+          marginBottom: "1.2rem",
+        }}
+      >
+        {d.stats.map((s, i) => (
+          <AnimatedStat
+            key={i}
+            value={s.value}
+            label={s.label}
+            prefix={s.prefix}
+            suffix={s.suffix}
+            color={a.color}
+            active={statsVisible}
+          />
+        ))}
+      </div>
+
+      {/* Tabbed Content */}
+      <div
+        style={{
+          background: "var(--card)",
+          border: "1px solid var(--bdr)",
+          borderRadius: 12,
+          overflow: "hidden",
+          marginBottom: "1.2rem",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            borderBottom: "1px solid var(--bdr)",
+          }}
+        >
+          {tabButtons.map((tb) => (
+            <button
+              key={tb.key}
+              onClick={() => setTab(tb.key)}
+              style={{
+                flex: 1,
+                fontFamily: "monospace",
+                fontSize: "0.58rem",
+                letterSpacing: "0.06em",
+                padding: "0.55rem 0.4rem",
+                border: "none",
+                borderBottom:
+                  tab === tb.key
+                    ? "2px solid " + a.color
+                    : "2px solid transparent",
+                background: "transparent",
+                color: tab === tb.key ? a.color : "var(--dim)",
+                cursor: "pointer",
+                transition: "all 0.2s",
+              }}
+            >
+              {tb.label}
+            </button>
+          ))}
+        </div>
+        <div style={{ padding: "1.1rem", minHeight: 100 }}>
+          {tab === "context" && (
+            <p
+              style={{
+                fontSize: "0.8rem",
+                color: "var(--dim)",
+                lineHeight: 1.8,
+              }}
+            >
+              {d.context}
+            </p>
+          )}
+          {tab === "techniques" && (
+            <ul style={{ listStyle: "none", padding: 0 }}>
+              {d.techniques.map((t, i) => (
+                <li
+                  key={i}
+                  style={{
+                    fontSize: "0.78rem",
+                    color: "var(--dim)",
+                    padding: "0.2rem 0 0.2rem 1rem",
+                    position: "relative",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  <span
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      color: a.color,
+                      fontWeight: 700,
+                    }}
+                  >
+                    &rsaquo;
+                  </span>
+                  {t}
+                </li>
+              ))}
+            </ul>
+          )}
+          {tab === "impact" && (
+            <ul style={{ listStyle: "none", padding: 0 }}>
+              {d.impact.map((t, i) => (
+                <li
+                  key={i}
+                  style={{
+                    fontSize: "0.78rem",
+                    color: "var(--dim)",
+                    padding: "0.2rem 0 0.2rem 1rem",
+                    position: "relative",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  <span
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      color: a.color,
+                      fontWeight: 700,
+                    }}
+                  >
+                    &rsaquo;
+                  </span>
+                  {t}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {/* Vertical Timeline */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "0.5rem",
+        }}
+      >
+        <h3
+          style={{
+            fontSize: "0.85rem",
+            fontWeight: 500,
+            color: "var(--text)",
+          }}
+        >
+          Cronologia detallada
+        </h3>
+        <button
+          onClick={() => {
+            setExpandAll(!expandAll);
+            setOpenEvent(null);
+          }}
+          style={{
+            fontFamily: "monospace",
+            fontSize: "0.52rem",
+            padding: "0.2rem 0.5rem",
+            borderRadius: 4,
+            border: "1px solid " + a.color + "40",
+            background: "transparent",
+            color: a.color,
+            cursor: "pointer",
+          }}
+        >
+          {expandAll ? "COLAPSAR" : "EXPANDIR TODO"}
+        </button>
+      </div>
+      <div
+        style={{
+          position: "relative",
+          paddingLeft: "0.5rem",
+          borderLeft: "2px solid " + a.color + "28",
+          marginLeft: 6,
+        }}
+      >
+        {events.map((ev) => (
+          <TimelineEvent
+            key={ev.id}
+            ev={ev}
+            color={a.color}
+            isOpen={expandAll || openEvent === ev.id}
+            onClick={() => {
+              if (!expandAll) {
+                setOpenEvent(openEvent === ev.id ? null : ev.id);
+              }
+            }}
+          />
+        ))}
+      </div>
+
+      {/* MITRE */}
+      <div
+        style={{
+          background: "var(--card)",
+          border: "1px solid var(--bdr)",
+          borderRadius: 10,
+          padding: "0.9rem",
+          marginTop: "1rem",
+        }}
+      >
+        <div
+          style={{
+            fontFamily: "monospace",
+            fontSize: "0.55rem",
+            letterSpacing: "0.15em",
+            color: a.color,
+            marginBottom: "0.5rem",
+          }}
+        >
+          MITRE ATT&CK - {a.name} ({d.mitre})
+        </div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "0.6rem",
+          }}
+        >
+          <p
+            style={{
+              fontSize: "0.65rem",
+              color: "var(--dim)",
+              opacity: 0.7,
+              margin: 0,
+            }}
+          >
+            Click en cada tecnica para ver como fue aplicada en {a.name}
+          </p>
+          <button
+            onClick={() => setMitreExpand(!mitreExpand)}
+            style={{
+              fontFamily: "monospace",
+              fontSize: "0.52rem",
+              padding: "0.2rem 0.5rem",
+              borderRadius: 4,
+              border: "1px solid " + a.color + "40",
+              background: "transparent",
+              color: a.color,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {mitreExpand ? "COLAPSAR TODAS" : "EXPANDIR TODAS"}
+          </button>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "0.3rem",
+            alignItems: "flex-start",
+          }}
+        >
+          {d.mitreTags.map((t, i) => (
+            <MitreTag key={i} tag={t} color={a.color} forceOpen={mitreExpand} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// MAIN APP
+// ============================================================
+
+function App() {
+  const [filters, setFilters] = useState([
+    "stuxnet",
+    "wannacry",
+    "solarwinds",
+  ]);
+  const [view, setView] = useState("timeline");
+  const [showHero, setShowHero] = useState(true);
+  const [dark, setDark] = useState(true);
+
+  function toggleFilter(key) {
+    if (filters.length === 1 && filters[0] === key) {
+      return;
+    }
+    if (filters.includes(key)) {
+      setFilters(filters.filter((f) => f !== key));
+    } else {
+      setFilters([...filters, key]);
+    }
+  }
+
+  const themeVars = dark
+    ? {
+        "--bg": "#0a0a0f",
+        "--card": "#12121a",
+        "--bdr": "rgba(255,255,255,0.07)",
+        "--text": "#e8e8f0",
+        "--dim": "#8888a0",
+      }
+    : {
+        "--bg": "#f4f4f7",
+        "--card": "#ffffff",
+        "--bdr": "rgba(0,0,0,0.08)",
+        "--text": "#1a1a2e",
+        "--dim": "#666680",
+      };
+
+  const attackKeys = ["stuxnet", "wannacry", "solarwinds"];
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "var(--bg)",
+        color: "var(--text)",
+        fontFamily: "'Segoe UI', system-ui, sans-serif",
+        ...themeVars,
+      }}
+    >
+      <style>
+        {`
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+          }
+          @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(0,229,160,0.12); }
+            50% { box-shadow: 0 0 40px rgba(0,229,160,0.25); }
+          }
+          ::-webkit-scrollbar { height: 5px; width: 5px; }
+          ::-webkit-scrollbar-thumb { background: var(--bdr); border-radius: 3px; }
+        `}
+      </style>
+
+      {/* ========== HERO ========== */}
+      {showHero && (
+        <div
+          style={{
+            minHeight: "100vh",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+            textAlign: "center",
+            padding: "2rem",
+            position: "relative",
+            animation: "fadeIn 0.8s ease",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              pointerEvents: "none",
+              background:
+                "radial-gradient(ellipse 500px 350px at 20% 50%, rgba(0,229,160,0.06) 0%, transparent 70%), radial-gradient(ellipse 500px 350px at 50% 60%, rgba(255,51,102,0.04) 0%, transparent 70%), radial-gradient(ellipse 500px 350px at 80% 40%, rgba(255,170,0,0.04) 0%, transparent 70%)",
+            }}
+          />
+
+          <div
+            style={{
+              fontFamily: "monospace",
+              fontSize: "0.58rem",
+              letterSpacing: "0.3em",
+              color: "var(--dim)",
+              marginBottom: "1.5rem",
+              textTransform: "uppercase",
+              position: "relative",
+            }}
+          >
+            Tecnicas de Ciberdefensa y Ciberataque - Tarea 3
+          </div>
+
+          <h1
+            style={{
+              fontSize: "clamp(1.8rem, 5.5vw, 3.5rem)",
+              fontWeight: 300,
+              lineHeight: 1.15,
+              maxWidth: 680,
+              marginBottom: "1rem",
+              position: "relative",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Cronologia de la{" "}
+            <span style={{ color: "#00e5a0", fontStyle: "italic" }}>
+              Ciberguerra
+            </span>{" "}
+            Moderna
+          </h1>
+
+          <p
+            style={{
+              fontSize: "0.92rem",
+              color: "var(--dim)",
+              maxWidth: 500,
+              marginBottom: "2.5rem",
+              position: "relative",
+              lineHeight: 1.7,
+            }}
+          >
+            Tres ciberataques que redefinieron la guerra digital, el derecho
+            internacional y la arquitectura de seguridad global.
+          </p>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "1.3rem",
+              flexWrap: "wrap",
+              justifyContent: "center",
+              position: "relative",
+              marginBottom: "2.5rem",
+            }}
+          >
+            {Object.values(ATTACKS).map((a) => (
+              <div
+                key={a.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontFamily: "monospace",
+                  fontSize: "0.75rem",
+                }}
+              >
+                <div
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: "50%",
+                    background: a.color,
+                    boxShadow: "0 0 10px " + a.color,
+                  }}
+                />
+                [{a.flag}] {a.name} | {a.year}
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setShowHero(false)}
+            style={{
+              fontFamily: "monospace",
+              fontSize: "0.68rem",
+              letterSpacing: "0.1em",
+              padding: "0.75rem 2rem",
+              border: "1px solid rgba(0,229,160,0.3)",
+              borderRadius: 8,
+              background: "rgba(0,229,160,0.06)",
+              color: "#00e5a0",
+              cursor: "pointer",
+              transition: "all 0.3s",
+              position: "relative",
+              animation: "glow 3s infinite",
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = "rgba(0,229,160,0.15)";
+              e.target.style.transform = "scale(1.05)";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = "rgba(0,229,160,0.06)";
+              e.target.style.transform = "scale(1)";
+            }}
+          >
+            {"EXPLORAR LINEA DE TIEMPO ->"}
+          </button>
+
+          <div
+            style={{
+              position: "absolute",
+              bottom: "2rem",
+              fontFamily: "monospace",
+              fontSize: "0.52rem",
+              color: "var(--dim)",
+              animation: "pulse 2s infinite",
+            }}
+          >
+            Maestria en Ciberseguridad | UEES / INISEG | Abril 2026
+          </div>
+        </div>
+      )}
+
+      {/* ========== MAIN CONTENT ========== */}
+      {!showHero && (
+        <div style={{ animation: "fadeIn 0.4s ease" }}>
+          {/* Toolbar */}
+          <div
+            style={{
+              position: "sticky",
+              top: 0,
+              zIndex: 100,
+              background: dark
+                ? "rgba(10,10,15,0.93)"
+                : "rgba(244,244,247,0.95)",
+              backdropFilter: "blur(12px)",
+              borderBottom: "1px solid var(--bdr)",
+              padding: "0.45rem 1rem",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "0.4rem",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                gap: "0.35rem",
+                alignItems: "center",
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "0.5rem",
+                  color: "var(--dim)",
+                  marginRight: 2,
+                }}
+              >
+                FILTRO:
+              </span>
+              {Object.values(ATTACKS).map((a) => {
+                const isOn = filters.includes(a.id);
+                return (
+                  <button
+                    key={a.id}
+                    onClick={() => toggleFilter(a.id)}
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: "0.55rem",
+                      padding: "0.2rem 0.5rem",
+                      borderRadius: 20,
+                      border:
+                        "1px solid " + (isOn ? a.color : "var(--bdr)"),
+                      background: isOn ? a.color + "18" : "transparent",
+                      color: isOn ? a.color : "var(--dim)",
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    [{a.flag}] {a.name}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: 5,
+                alignItems: "center",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  border: "2px solid var(--bdr)",
+                  borderRadius: 8,
+                  overflow: "hidden",
+                }}
+              >
+                {[
+                  ["timeline", "CRONOLOGIA"],
+                  ["compare", "COMPARATIVA"],
+                ].map(([v, l]) => {
+                  const isActive = view === v;
+                  const activeColor = v === "timeline" ? "#00e5a0" : "#ffaa00";
+                  return (
+                    <button
+                      key={v}
+                      onClick={() => setView(v)}
+                      style={{
+                        fontFamily: "monospace",
+                        fontSize: "0.62rem",
+                        fontWeight: isActive ? 700 : 400,
+                        letterSpacing: "0.1em",
+                        padding: "0.4rem 1rem",
+                        border: "none",
+                        background: isActive
+                          ? activeColor + "20"
+                          : "transparent",
+                        color: isActive ? activeColor : "var(--dim)",
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                        borderRight:
+                          v === "timeline"
+                            ? "1px solid var(--bdr)"
+                            : "none",
+                      }}
+                    >
+                      {isActive ? ">> " : ""}
+                      {l}
+                      {isActive ? " <<" : ""}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => setDark(!dark)}
+                style={{
+                  fontSize: "0.7rem",
+                  padding: "0.2rem 0.4rem",
+                  border: "1px solid var(--bdr)",
+                  borderRadius: 6,
+                  background: "transparent",
+                  cursor: "pointer",
+                  color: "var(--dim)",
+                }}
+                title={dark ? "Modo claro" : "Modo oscuro"}
+              >
+                {dark ? "SUN" : "MOON"}
+              </button>
+            </div>
+          </div>
+
+          {/* Content area */}
+          <div
+            style={{
+              maxWidth: 900,
+              margin: "0 auto",
+              padding: "1.5rem 1.2rem",
+            }}
+          >
+            {view === "timeline" && (
+              <>
+                <HorizontalTimeline filters={filters} />
+                <EvolutionSection />
+                {attackKeys.map((k) => (
+                  <AttackDetailSection
+                    key={k}
+                    attackKey={k}
+                    filters={filters}
+                  />
+                ))}
+              </>
+            )}
+
+            {view === "compare" && (
+              <div>
+                <h2
+                  style={{
+                    fontSize: "1.3rem",
+                    fontWeight: 300,
+                    textAlign: "center",
+                    marginBottom: "0.3rem",
+                  }}
+                >
+                  Analisis Comparativo
+                </h2>
+                <p
+                  style={{
+                    textAlign: "center",
+                    fontSize: "0.72rem",
+                    color: "var(--dim)",
+                    marginBottom: "1.5rem",
+                  }}
+                >
+                  Comparacion de los tres ciberataques segun multiples dimensiones de analisis
+                </p>
+                <div style={{ overflowX: "auto" }}>
+                  <table
+                    style={{
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      fontSize: "0.78rem",
+                    }}
+                  >
+                    <thead>
+                      <tr>
+                        <th
+                          style={{
+                            padding: "1rem 0.8rem",
+                            textAlign: "left",
+                            borderBottom: "2px solid var(--bdr)",
+                            fontFamily: "monospace",
+                            fontSize: "0.7rem",
+                            fontWeight: 600,
+                            letterSpacing: "0.08em",
+                            color: "var(--dim)",
+                            verticalAlign: "bottom",
+                          }}
+                        >
+                          Dimension
+                        </th>
+                        {Object.values(ATTACKS)
+                          .filter((a) => filters.includes(a.id))
+                          .map((a) => (
+                            <th
+                              key={a.id}
+                              style={{
+                                padding: "1rem 0.8rem",
+                                textAlign: "left",
+                                borderBottom: "2px solid " + a.color + "40",
+                                verticalAlign: "bottom",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  fontFamily: "monospace",
+                                  fontSize: "0.55rem",
+                                  color: a.color,
+                                  opacity: 0.6,
+                                  marginBottom: 2,
+                                }}
+                              >
+                                [{a.flag}]
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: "0.9rem",
+                                  fontWeight: 700,
+                                  color: a.color,
+                                  letterSpacing: "0.02em",
+                                }}
+                              >
+                                {a.name}
+                              </div>
+                              <div
+                                style={{
+                                  fontFamily: "monospace",
+                                  fontSize: "0.55rem",
+                                  color: "var(--dim)",
+                                  marginTop: 2,
+                                }}
+                              >
+                                {a.year} | {a.paradigm}
+                              </div>
+                            </th>
+                          ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {COMPARE_ROWS.map((row, i) => {
+                        const colIndices = [0, 1, 2].filter((ci) =>
+                          filters.includes(attackKeys[ci])
+                        );
+                        return (
+                          <tr
+                            key={i}
+                            style={{
+                              borderBottom: "1px solid var(--bdr)",
+                              transition: "background 0.2s",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = dark
+                                ? "rgba(255,255,255,0.03)"
+                                : "rgba(0,0,0,0.03)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background =
+                                "transparent";
+                            }}
+                          >
+                            <td
+                              style={{
+                                padding: "0.75rem 0.8rem",
+                                fontWeight: 600,
+                                fontSize: "0.8rem",
+                                color: "var(--text)",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {row[0]}
+                            </td>
+                            {colIndices.map((ci) => (
+                              <td
+                                key={ci}
+                                style={{
+                                  padding: "0.75rem 0.8rem",
+                                  color: "var(--dim)",
+                                  lineHeight: 1.55,
+                                  fontSize: "0.78rem",
+                                }}
+                              >
+                                {row[ci + 1]}
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* References */}
+            <div
+              style={{
+                marginTop: "2rem",
+                padding: "1.1rem",
+                background: "var(--card)",
+                borderRadius: 12,
+                border: "1px solid var(--bdr)",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "0.85rem",
+                  fontWeight: 400,
+                  marginBottom: "0.7rem",
+                  textAlign: "center",
+                }}
+              >
+                Referencias Academicas
+              </h3>
+              <div
+                style={{
+                  columns: 2,
+                  columnGap: "1.5rem",
+                  fontSize: "0.62rem",
+                  color: "var(--dim)",
+                  lineHeight: 1.9,
+                }}
+              >
+                {REFS.map((r, i) => (
+                  <p
+                    key={i}
+                    style={{ breakInside: "avoid", marginBottom: 2 }}
+                  >
+                    {i + 1}. {r}
+                  </p>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div
+              style={{
+                textAlign: "center",
+                padding: "1.5rem 0 1rem",
+                fontSize: "0.6rem",
+                color: "var(--dim)",
+              }}
+            >
+              <strong style={{ color: "var(--text)" }}>
+                Maestria en Ciberseguridad, Analisis e Ingenieria - UEES /
+                INISEG
+              </strong>
+              <br />
+              Tecnicas de Ciberdefensa y Ciberataque | Tarea 3 | Abril 2026
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>
